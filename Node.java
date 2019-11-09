@@ -1,6 +1,7 @@
 package BGP_Simulation_temp;
 
 import java.util.Hashtable;
+import java.util.Set;
 import java.util.Vector;
 
 import model.modeling.message;
@@ -46,16 +47,20 @@ public class Node extends ViewableAtomic
         askOtherNodes = false;
         setType();
         super.initialize();
+        
+        ///testing
+        
+        System.out.println("Input majority " + inputMajority());
     }
     
     public void deltext(double e, message x) {
         Continue(e);
-        System.out.println("seq number " + ID + " " + seqNumber);
         System.out.println("My type " + ID + " " + type);
         if (phaseIs("passive")) {
             //iteration through the messages
             for (int i = 0; i < x.getLength(); i++) {
                 if (messageOnPort(x, IN_COMMANDER, i)) {
+                    System.out.println("recived mes " + ID + " " + ((nodeMsg) x.getValOnPort(IN_COMMANDER, 0)).msgBag);
                     //the name for further transferring
                     msgName = setMsgName();
                     //create "the pointer" to the received vector of vectors
@@ -71,8 +76,19 @@ public class Node extends ViewableAtomic
                         if (checked == 1)
                             continue;
                         Vector<Integer> tempV = new Vector<Integer>();
-                        for (int k = 0; k < temp.elementAt(j).size(); k++) 
-                            tempV.add(temp.elementAt(j).elementAt(k));
+                        //if the node is traitor and received message which was not changed before
+                        //change the transfer message
+                        if (type == 1 && temp.elementAt(j).elementAt(0) != makeFakeMsg(netStat.msg)) {
+                            for (int k = 0; k < temp.elementAt(j).size(); k++) {
+                                if (k == 0)
+                                    tempV.add(makeFakeMsg(netStat.msg));
+                                else
+                                    tempV.add(temp.elementAt(j).elementAt(k));
+                            }
+                        } else {
+                            for (int k = 0; k < temp.elementAt(j).size(); k++) 
+                                tempV.add(temp.elementAt(j).elementAt(k));
+                        }
                         transferMsgBag.add(tempV);
                     }
                     
@@ -103,22 +119,12 @@ public class Node extends ViewableAtomic
         }
         
         //node starts asking other's nodes decision
-        if (phaseIs("active") && !askOtherNodes) {
+        if (phaseIs("received")) {
             for (int i = 0; i < x.getLength(); i++) {
                 
                 if (messageOnPort(x, IN_NODES, i)) {
-                    System.out.println("" + this.ID + " " + ((askOthrMsg) x.getValOnPort(IN_NODES, i)).msgBag);
-                    askOtherMsgBag = ((askOthrMsg) x.getValOnPort(IN_NODES, i)).msgBag;
-                    for (int j = 0; j < askOtherMsgBag.size(); j++) {
-                        if (askOtherMsgBag.elementAt(j).elementAt(1) == this.ID && 
-                                askOtherMsgBag.elementAt(j).elementAt(3) == 999) {
-                            askOtherMsgBag.elementAt(j).set(3, 1000);
-                            break;
-                        }
-                    }
-                    
-                    askOtherNodes = true;
-                    holdIn("active", 0);
+                    System.out.println("Hi");
+                   
                 }
             }
         }
@@ -126,8 +132,9 @@ public class Node extends ViewableAtomic
     }
     
     public void deltint() {
-        holdIn("active", ID);
-        createAskMsg();
+        phase = "received";
+        sigma = INFINITY;
+       // createAskMsg();
     }
        
     public message out() {
@@ -238,27 +245,55 @@ public class Node extends ViewableAtomic
             return "retreat";
         else
             return "attack";
-        
     }
     
-    public int input_majority() {
+    public int calcNodeDecs() {
+        if (type == 1) {
+            return makeFakeMsg(netStat.msg);
+        }
+        else
+            return 0;
+    }
+    
+    public int inputMajority() {
       //if deleted all the values
         if (input.isEmpty())
             return 999;
         
         Hashtable<Integer, Integer> hash = new Hashtable<Integer, Integer>();
         
-      //count how many times each value is in the vector and put it to the map
-     /*   for (int i = 0; i < input.size(); i++) {
+      //count how many times each value is in the vector and put it to the hash table
+        for (int i = 0; i < input.size(); i++) {
             //if found the element in the hash
             if (hash.containsKey(input.elementAt(i)) == true) {
-                hash.
+                int temp = hash.get(input.elementAt(i));
+                temp++;
+                hash.put(input.elementAt(i), temp);
             }
-            auto it = hash.find(input[i]); //if not found the value return iterator to the end
-            if (it != hash.end())
-                it->second++;
-            hash.emplace(val_vec[i], 1);
-        }*/
-        return input.elementAt(0);
+            else
+                hash.put(input.elementAt(i), 1);
+        }
+        
+      //searching for the most often value
+        int max = 0, key_ = 0;
+        Set<Integer> keys = hash.keySet();
+        for (int key: keys) {
+            if (hash.get(key) > max) {
+                max = hash.get(key);
+                key_ = key;
+            }
+        }
+        
+      //max should be unique, if it is not unique, so there is no majority and we return 0
+        for (int key: keys) {
+            if (hash.get(key) == max && key_ != key)
+                return 0;
+        }
+        System.out.println("Hash" + hash);
+        System.out.println("Often value " + key_);
+        return key_;
     }
+    
+    
+    
 }
