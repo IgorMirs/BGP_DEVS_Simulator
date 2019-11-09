@@ -9,7 +9,6 @@ public class Observer extends ViewableAtomic
 {
     static final public String IN_PORT = "in";
     static final public String OUT_PORT1 = "out_msg";
-    static final public String OUT_PORT2 = "out_decs";
     
     protected int ID;   //ID of the observer
     protected int msg;  //the message that the observer send to all other nodes
@@ -19,13 +18,15 @@ public class Observer extends ViewableAtomic
     protected String msgName;  //the name for the message
     protected NetStat netStat;
     
+    ///test
+    protected int counter;
+    
     private int seqCounter;  //the counter for the sequence number of the send message
     
     public Observer(String name, int id, int message, NetStat netStat_) {
         super(name);
             addInport(IN_PORT);
             addOutport(OUT_PORT1);
-            addOutport(OUT_PORT2);
         this.ID = id;
         this.msg = message;
         if (msg == 0)
@@ -41,26 +42,27 @@ public class Observer extends ViewableAtomic
         sigma = INFINITY;
         //initialization of all state variables
         input = new Vector<Integer>();
-        msgBag = new Vector<Vector<Integer>>();
+      
         seqCounter = 1;
         setType();
+        counter = 1;
         //creating the message (message, source, dest, nextHop, checkflag, sequence_number)
         createMsg();
        
         //put the phase to active, send the output message, call deltint() 
-        holdIn("sendMsg", 0);
+        holdIn("active", 0);
         super.initialize();
+        
     }
     
-    public void deltext(double e, message x) {
-        Continue(e);
-        passivate();
-        holdIn("formDecs", 1);
-    }
-    
+
     public void deltint() {
         passivate();
-        holdIn("formDecs", 1);
+        if (counter <= netStat.nNodes) {
+            msgName = "WhatYouHave?";
+            createDecMsg(counter);
+            holdIn("active", 1);
+        }
     }
     
     public void setType() {
@@ -73,6 +75,7 @@ public class Observer extends ViewableAtomic
     }
     
     public void createMsg() {
+        msgBag = new Vector<Vector<Integer>>();
         for (int i = 0; i < netStat.nNodes; i++) {
             Vector<Integer> temp = new Vector<Integer>();
             //message
@@ -90,16 +93,20 @@ public class Observer extends ViewableAtomic
             msgBag.add(temp);
         }
     }
+    
+    public void createDecMsg(int counter_) {
+        msgBag = new Vector<Vector<Integer>>();
+            Vector<Integer> temp = new Vector<Integer>();
+            //message
+            temp.add(counter_); 
+            msgBag.add(temp);
+            counter++;
+    }
        
     public message out() {
         message m = new message();
-        if (phase == "sendMsg") {
-            nodeMsg stm = new nodeMsg(msgName, msgBag);
-            m.add(makeContent(OUT_PORT1, stm));
-        } else {
-            nodeMsg stm = new nodeMsg(msgName, msgBag);
-            m.add(makeContent(OUT_PORT2, stm));
-        }
+        nodeMsg stm = new nodeMsg(msgName, msgBag);
+        m.add(makeContent(OUT_PORT1, stm));
         return m;
     }
 }

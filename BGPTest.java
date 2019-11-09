@@ -51,12 +51,10 @@ public class BGPTest extends ViewableDigraph
         for (int i = 0; i < connectivity_matrix.length; i++) {
             if (connectivity_matrix[i][0] == 0) {
                 addCoupling(commander,commander.OUT_PORT1, network[connectivity_matrix[i][1] - 1], network[connectivity_matrix[i][1] - 1].IN_COMMANDER);
-                addCoupling(commander,commander.OUT_PORT2, network[connectivity_matrix[i][1] - 1], network[connectivity_matrix[i][1] - 1].IN_NODES);
                 addCoupling(network[connectivity_matrix[i][1] - 1], network[connectivity_matrix[i][1] - 1].OUT_COMMANDER, commander,commander.IN_PORT);
             }
             else if (connectivity_matrix[i][1] == 0) {
                 addCoupling(commander,commander.OUT_PORT1, network[connectivity_matrix[i][0] - 1], network[connectivity_matrix[i][0] - 1].IN_COMMANDER);
-                addCoupling(commander,commander.OUT_PORT2, network[connectivity_matrix[i][0] - 1], network[connectivity_matrix[i][0] - 1].IN_NODES);
                 addCoupling(network[connectivity_matrix[i][0] - 1], network[connectivity_matrix[i][0] - 1].OUT_COMMANDER, commander,commander.IN_PORT);
             }
             else {

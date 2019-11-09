@@ -14,7 +14,9 @@ public class Node extends ViewableAtomic
 
     static final public String IN_NODES = "in_nod";
     static final public String OUT_NODES = "out_nod";
-
+    
+    static public double trDelay = 0.01;
+    
     protected int ID;
     protected Vector<Integer> input;
     protected Vector<Vector<Integer>> transferMsgBag;  //the commander's msg for further transferring
@@ -24,6 +26,7 @@ public class Node extends ViewableAtomic
     public int type;
     protected boolean askOtherNodes;
     protected NetStat netStat;
+    protected int nodeDecision;
     
     public Node(String name, int id, NetStat netStat_) {
         super(name);
@@ -48,19 +51,16 @@ public class Node extends ViewableAtomic
         setType();
         super.initialize();
         
-        ///testing
-        
-        System.out.println("Input majority " + inputMajority());
     }
     
     public void deltext(double e, message x) {
         Continue(e);
-        System.out.println("My type " + ID + " " + type);
+      //  System.out.println("My type " + ID + " " + type);
         if (phaseIs("passive")) {
             //iteration through the messages
             for (int i = 0; i < x.getLength(); i++) {
                 if (messageOnPort(x, IN_COMMANDER, i)) {
-                    System.out.println("recived mes " + ID + " " + ((nodeMsg) x.getValOnPort(IN_COMMANDER, 0)).msgBag);
+                    System.out.println("recived mes " + ID + " " + ((nodeMsg) x.getValOnPort(IN_COMMANDER, i)).msgBag);
                     //the name for further transferring
                     msgName = setMsgName();
                     //create "the pointer" to the received vector of vectors
@@ -118,17 +118,22 @@ public class Node extends ViewableAtomic
             holdIn("transfer", 0);
         }
         
-        //node starts asking other's nodes decision
+        //node receive the message to calculate the decision
         if (phaseIs("received")) {
             for (int i = 0; i < x.getLength(); i++) {
+                if (messageOnPort(x, IN_COMMANDER, i)) {
+                    if (((nodeMsg) x.getValOnPort(IN_COMMANDER, i)).msgBag.elementAt(0).elementAt(0) == ID) {
+                        nodeDecision = calcNodeDecs(netStat.nTraitors);
+                        System.out.println("Node decision " + this.ID + " " + nodeDecision);
+                    }
+                }
                 
                 if (messageOnPort(x, IN_NODES, i)) {
-                    System.out.println("Hi");
-                   
+                    System.out.println("Hello");
                 }
             }
         }
-        System.out.println("INPUT " + ID + " " + input);
+       // System.out.println("INPUT " + ID + " " + input);
     }
     
     public void deltint() {
@@ -144,8 +149,8 @@ public class Node extends ViewableAtomic
             m.add(makeContent(OUT_COMMANDER, ndm));
         }
         else {
-            askOthrMsg askOth = new askOthrMsg("ASK", askOtherMsgBag);
-            m.add(makeContent(OUT_NODES,askOth));
+            nodeMsg ndm = new nodeMsg("WhatYouHave", askOtherMsgBag);
+            m.add(makeContent(OUT_NODES, ndm));
         }
             
         return m;
@@ -164,8 +169,6 @@ public class Node extends ViewableAtomic
             temp.add(i + 1);
             //next hop
             temp.add(i + 1);
-            //nodes decision (999 - default value)
-            temp.add(999);
             askOtherMsgBag.add(temp);
         }
     }
@@ -247,12 +250,17 @@ public class Node extends ViewableAtomic
             return "attack";
     }
     
-    public int calcNodeDecs() {
+    public int calcNodeDecs(int nTraitors) {
         if (type == 1) {
             return makeFakeMsg(netStat.msg);
         }
-        else
+        else if (nTraitors == 0)
+            return inputMajority();
+        else {
+            createAskMsg();
+            holdIn("WhatYouHave", trDelay);
             return 0;
+        }
     }
     
     public int inputMajority() {
@@ -289,8 +297,7 @@ public class Node extends ViewableAtomic
             if (hash.get(key) == max && key_ != key)
                 return 0;
         }
-        System.out.println("Hash" + hash);
-        System.out.println("Often value " + key_);
+    
         return key_;
     }
     
