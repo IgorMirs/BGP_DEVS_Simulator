@@ -15,6 +15,9 @@ public class Node extends ViewableAtomic
     static final public String IN_NODES = "in_nod";
     static final public String OUT_NODES = "out_nod";
     
+    static final public String IN_DECISION = "in_decs";
+    static final public String OUT_DECISION = "out_decs";
+    
     static public double trDelay = 0.01;
     
     protected int ID;
@@ -28,12 +31,16 @@ public class Node extends ViewableAtomic
     protected NetStat netStat;
     protected int nodeDecision;
     
+    protected double time = 0;
+    
     public Node(String name, int id, NetStat netStat_) {
         super(name);
         addInport(IN_COMMANDER);
         addOutport(OUT_COMMANDER);
         addInport(IN_NODES);
         addOutport(OUT_NODES);
+        addInport(IN_DECISION);
+        addOutport(OUT_DECISION);
         this.ID = id;
         netStat = netStat_;
     }
@@ -41,7 +48,7 @@ public class Node extends ViewableAtomic
     public void initialize() {
         //defining phase and sigma is equal to passivate()
         phase = "passive";
-        sigma = INFINITY;
+        sigma = 9999;
         input = new Vector<Integer>();
         askOtherMsgBag = new Vector<Vector<Integer>>();
         seqNumber = new Vector<Vector<Integer>>();
@@ -55,8 +62,13 @@ public class Node extends ViewableAtomic
     
     public void deltext(double e, message x) {
         Continue(e);
-      //  System.out.println("My type " + ID + " " + type);
-        if (phaseIs("passive")) {
+        time = netStat.time;
+        System.out.println("Time " + time);
+//       System.out.println("FormattedTN " + Double.valueOf(getFormattedTN()));
+//       else
+//           System.out.println("Formated Time " + Double.valueOf(getFormattedTL()));
+        
+       if (phaseIs("passive")) {
             //iteration through the messages
             for (int i = 0; i < x.getLength(); i++) {
                 if (messageOnPort(x, IN_COMMANDER, i)) {
@@ -113,51 +125,68 @@ public class Node extends ViewableAtomic
                             break;
                         }
                     }
-                }
-            }
-            holdIn("transfer", 0);
-        }
-        
-        //node receive the message to calculate the decision
-        if (phaseIs("received")) {
-            for (int i = 0; i < x.getLength(); i++) {
-                if (messageOnPort(x, IN_COMMANDER, i)) {
-                    if (((nodeMsg) x.getValOnPort(IN_COMMANDER, i)).msgBag.elementAt(0).elementAt(0) == ID) {
-                        nodeDecision = calcNodeDecs(netStat.nTraitors);
-                        System.out.println("Node decision " + this.ID + " " + nodeDecision);
-                    }
+                    holdIn("transfer", 0);
                 }
                 
-                if (messageOnPort(x, IN_NODES, i)) {
-                    System.out.println("Hello");
+                if (messageOnPort(x, IN_DECISION, i)) {
+                    if (((nodeMsg) x.getValOnPort(IN_DECISION, i)).msgBag.elementAt(0).elementAt(0) == ID) {
+//                        nodeDecision = calcNodeDecs(netStat.nTraitors);
+                        System.out.println("Decision msg " + this.ID + " " + ((nodeMsg) x.getValOnPort(IN_DECISION, i)).msgBag);
+                    }
+                    else {
+                        crtTransferDecsMsg(((nodeMsg) x.getValOnPort(IN_DECISION, i)).msgBag);
+                        holdIn("trfDecs",0);
+                    }
                 }
             }
         }
-       // System.out.println("INPUT " + ID + " " + input);
     }
     
     public void deltint() {
-        phase = "received";
-        sigma = INFINITY;
-       // createAskMsg();
+        if(phase == "transfer" && Double.valueOf(getFormattedTN()) > time) {
+            phase = "passive";
+            sigma = 9999;
+            time = Double.valueOf(getFormattedTN());
+        }
+        
+        else if (phaseIs("trfDecs") && Double.valueOf(getFormattedTN()) > time) {
+            phase = "passive";
+            sigma = 9999;
+            System.out.println("I am here");
+            time = Double.valueOf(getFormattedTN());
+        }
     }
        
     public message out() {
+       // time = Double.valueOf(getFormattedTN());
         message m = new message();
-        if (phaseIs("transfer")) {
+        if (phaseIs("transfer") && Double.valueOf(getFormattedTN()) <= time) {
             nodeMsg ndm = new nodeMsg(msgName, transferMsgBag);
             m.add(makeContent(OUT_COMMANDER, ndm));
+            sigma = trDelay;
         }
-        else {
-            nodeMsg ndm = new nodeMsg("WhatYouHave", askOtherMsgBag);
-            m.add(makeContent(OUT_NODES, ndm));
+        if(phaseIs("trfDecs") && Double.valueOf(getFormattedTN()) <= time) {
+            nodeMsg ndm = new nodeMsg("DecisionTransf", transferMsgBag);
+            m.add(makeContent(OUT_DECISION, ndm));
+            sigma = trDelay;
         }
+//        else {
+//            nodeMsg ndm = new nodeMsg("WhatYouHave", askOtherMsgBag);
+//            m.add(makeContent(OUT_NODES, ndm));
+//        }
             
         return m;
     }
     
+    public void crtTransferDecsMsg(Vector<Vector<Integer>> sample) {
+        transferMsgBag = new Vector<Vector<Integer>>();
+        Vector<Integer> temp = new Vector<Integer>();
+        temp.add(sample.elementAt(0).elementAt(0));
+        transferMsgBag.add(temp);
+    }
+    
     public void createAskMsg(){
-        askOtherMsgBag.clear();
+        askOtherMsgBag = new Vector<Vector<Integer>>();
         //creating the message (source, dest, nextHop)
         for (int i = 0; i < netStat.nNodes; i++) {
             if ((i + 1) == ID)
@@ -166,8 +195,6 @@ public class Node extends ViewableAtomic
             //source
             temp.add(ID);
             //destination
-            temp.add(i + 1);
-            //next hop
             temp.add(i + 1);
             askOtherMsgBag.add(temp);
         }
@@ -258,7 +285,7 @@ public class Node extends ViewableAtomic
             return inputMajority();
         else {
             createAskMsg();
-            holdIn("WhatYouHave", trDelay);
+       //     holdIn("WhatYouHave", trDelay);
             return 0;
         }
     }

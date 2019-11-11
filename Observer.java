@@ -9,6 +9,7 @@ public class Observer extends ViewableAtomic
 {
     static final public String IN_PORT = "in";
     static final public String OUT_PORT1 = "out_msg";
+    static final public String OUT_DECISION = "out_decs";
     
     protected int ID;   //ID of the observer
     protected int msg;  //the message that the observer send to all other nodes
@@ -27,6 +28,7 @@ public class Observer extends ViewableAtomic
         super(name);
             addInport(IN_PORT);
             addOutport(OUT_PORT1);
+            addOutport(OUT_DECISION);
         this.ID = id;
         this.msg = message;
         if (msg == 0)
@@ -98,7 +100,7 @@ public class Observer extends ViewableAtomic
         msgBag = new Vector<Vector<Integer>>();
             Vector<Integer> temp = new Vector<Integer>();
             //message
-            temp.add(counter_); 
+            temp.add(counter_);
             msgBag.add(temp);
             counter++;
     }
@@ -106,7 +108,11 @@ public class Observer extends ViewableAtomic
     public message out() {
         message m = new message();
         nodeMsg stm = new nodeMsg(msgName, msgBag);
-        m.add(makeContent(OUT_PORT1, stm));
+        netStat.time = Double.valueOf(getFormattedTN());
+        if (sigma == 0)
+            m.add(makeContent(OUT_PORT1, stm));
+        else
+            m.add(makeContent(OUT_DECISION, stm));
         return m;
     }
 }

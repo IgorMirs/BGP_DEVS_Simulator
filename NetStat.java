@@ -9,6 +9,8 @@ public class NetStat
     protected int nNodes;
     protected int nTraitors;
     
+    public double time = 0;
+    
     public NetStat(int[] tv, int msg_, int nNodes_, int nTraitors_) {
         traitorVec = tv;
         msg = msg_;
