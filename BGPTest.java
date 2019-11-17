@@ -1,4 +1,4 @@
-package BGP_Simulation_temp;
+package BGP_Simulation_git;
 
 import java.awt.Dimension;
 import java.awt.Point;
