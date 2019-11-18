@@ -1,4 +1,4 @@
-package BGP_Simulation_git;
+package BGP_Simulation_v02_Internal_decisions;
 
 import java.awt.Dimension;
 import java.awt.Point;
@@ -9,17 +9,35 @@ import view.modeling.ViewableDigraph;
 public class BGPTest extends ViewableDigraph
 {
     protected int nNodes = 5; //number of regular nodes (except commander in the network)
-    protected int sendMsg = 1; //original message to send 
+    protected int sendMsg = 0; //original message to send 
     private int [][] connectivity_matrix =
     {
         {0, 1},
+        {0, 2},
+        {0, 3},
+        {0, 4},
+        {0, 5},
         {1, 2},
+        {1, 3},
+        {1, 4},
+        {1, 5},
         {2, 3},
+        {2, 4},
+        {2, 5},
         {3, 4},
+        {3, 5},
         {4, 5},
-        {5, 0}
     };
-    
+///original ring connectivity
+//    {
+//        {0, 1},
+//        {1, 2},
+//        {2, 3},
+//        {3, 4},
+//        {4, 5},
+//        {5, 0}
+//    };
+//    
     //traitors in the network
     private int [] traitorVec = {2};
     private int nTraitors = traitorVec.length;
@@ -35,7 +53,7 @@ public class BGPTest extends ViewableDigraph
         NetStat netStat = new NetStat(traitorVec, sendMsg, nNodes, nTraitors);
 
         //creating the commander (name, ID, sending message, number of nodes to send)
-        Observer commander = new Observer("Commander", 0, sendMsg, netStat);
+        Observer commander = new Observer("Commander", 0, sendMsg, netStat, network);
         
         
         //creating the nodes

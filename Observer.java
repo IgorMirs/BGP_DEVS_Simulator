@@ -1,4 +1,4 @@
-package BGP_Simulation_git;
+package BGP_Simulation_v02_Internal_decisions;
 
 import java.util.Vector;
 
@@ -19,12 +19,14 @@ public class Observer extends ViewableAtomic
     protected String msgName;  //the name for the message
     protected NetStat netStat;
     
+    protected Node[] network;
+    
     ///test
     protected int counter;
     
     private int seqCounter;  //the counter for the sequence number of the send message
     
-    public Observer(String name, int id, int message, NetStat netStat_) {
+    public Observer(String name, int id, int message, NetStat netStat_, Node[] network_) {
         super(name);
             addInport(IN_PORT);
             addOutport(OUT_PORT1);
@@ -36,6 +38,7 @@ public class Observer extends ViewableAtomic
         else
             msgName = "attack";
         netStat = netStat_;
+        network = network_;
     }
     
     public void initialize() {
@@ -59,11 +62,11 @@ public class Observer extends ViewableAtomic
     
 
     public void deltint() {
-        passivate();
-        if (counter <= netStat.nNodes) {
-            msgName = "WhatYouHave?";
-            createDecMsg(counter);
-            holdIn("active", 1);
+        phase = "passive";
+        sigma = netStat.nNodes + 1;
+        if (Double.valueOf(getFormattedTN()) > netStat.nNodes) {
+            printNodesDecisions();
+            passivate();
         }
     }
     
@@ -73,6 +76,12 @@ public class Observer extends ViewableAtomic
             if (this.ID == netStat.traitorVec[i]) {
                 this.type = 1;
             }
+        }
+    }
+    
+    public void printNodesDecisions() {
+        for (int i = 0; i < netStat.nNodes; i++) {
+            System.out.println("Node ID " + network[i].ID + " type is " + network[i].type + " decision is " + network[i].nodeDecision);
         }
     }
     
@@ -111,8 +120,8 @@ public class Observer extends ViewableAtomic
         netStat.time = Double.valueOf(getFormattedTN());
         if (sigma == 0)
             m.add(makeContent(OUT_PORT1, stm));
-        else
-            m.add(makeContent(OUT_DECISION, stm));
+//        else
+//            m.add(makeContent(OUT_DECISION, stm));
         return m;
     }
 }

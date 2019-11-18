@@ -1,4 +1,4 @@
-package BGP_Simulation_git;
+package BGP_Simulation_v02_Internal_decisions;
 
 import java.util.Hashtable;
 import java.util.Set;
@@ -19,6 +19,8 @@ public class Node extends ViewableAtomic
     static final public String OUT_DECISION = "out_decs";
     
     static public double trDelay = 0.01;
+    static public int defaultDes = 999;
+    static public double calcDelay = 0.5;
     
     protected int ID;
     protected Vector<Integer> input;
@@ -30,6 +32,8 @@ public class Node extends ViewableAtomic
     protected boolean askOtherNodes;
     protected NetStat netStat;
     protected int nodeDecision;
+    
+    boolean getDecision;
     
     protected double time = 0;
     
@@ -48,7 +52,7 @@ public class Node extends ViewableAtomic
     public void initialize() {
         //defining phase and sigma is equal to passivate()
         phase = "passive";
-        sigma = 9999;
+        sigma = INFINITY;
         input = new Vector<Integer>();
         askOtherMsgBag = new Vector<Vector<Integer>>();
         seqNumber = new Vector<Vector<Integer>>();
@@ -56,23 +60,27 @@ public class Node extends ViewableAtomic
         fillSeqNum();
         askOtherNodes = false;
         setType();
+        getDecision = false;
+        nodeDecision = defaultDes;
+
         super.initialize();
+        
         
     }
     
     public void deltext(double e, message x) {
         Continue(e);
         time = netStat.time;
-        System.out.println("Time " + time);
+//        System.out.println("Time " + ID + " " + time);
 //       System.out.println("FormattedTN " + Double.valueOf(getFormattedTN()));
 //       else
 //           System.out.println("Formated Time " + Double.valueOf(getFormattedTL()));
         
-       if (phaseIs("passive")) {
+        if (phaseIs("passive")) {
             //iteration through the messages
             for (int i = 0; i < x.getLength(); i++) {
                 if (messageOnPort(x, IN_COMMANDER, i)) {
-                    System.out.println("recived mes " + ID + " " + ((nodeMsg) x.getValOnPort(IN_COMMANDER, i)).msgBag);
+  //                  System.out.println("recived mes " + ID + " " + ((nodeMsg) x.getValOnPort(IN_COMMANDER, i)).msgBag);
                     //the name for further transferring
                     msgName = setMsgName();
                     //create "the pointer" to the received vector of vectors
@@ -125,35 +133,76 @@ public class Node extends ViewableAtomic
                             break;
                         }
                     }
+                    if (ID == 1)
                     holdIn("transfer", 0);
-                }
+                } //end if (messageOnPort(x, IN_COMMANDER, i))
                 
+                if (messageOnPort(x, IN_NODES, i)) {
+                    holdIn("transfer_WYH",0);
+                }
+            } //end for (int i = 0; i < x.getLength(); i++) {
+        } // end if (phaseIs("passive"))
+        
+        if (phaseIs("calc_decs")) {
+            for (int i = 0; i < x.getLength(); i++) {
                 if (messageOnPort(x, IN_DECISION, i)) {
-                    if (((nodeMsg) x.getValOnPort(IN_DECISION, i)).msgBag.elementAt(0).elementAt(0) == ID) {
-//                        nodeDecision = calcNodeDecs(netStat.nTraitors);
-                        System.out.println("Decision msg " + this.ID + " " + ((nodeMsg) x.getValOnPort(IN_DECISION, i)).msgBag);
-                    }
-                    else {
-                        crtTransferDecsMsg(((nodeMsg) x.getValOnPort(IN_DECISION, i)).msgBag);
-                        holdIn("trfDecs",0);
-                    }
+                    int msgVal = ((nodeMsg) x.getValOnPort(IN_DECISION, i)).msgBag.elementAt(0).elementAt(0);
+                    this.input.add(msgVal);
                 }
             }
         }
-    }
+        System.out.println("Input " + ID + " " + this.input);
+        System.out.println("My decision " + ID + " " + this.nodeDecision);
+    } //end deltext()
     
     public void deltint() {
         if(phase == "transfer" && Double.valueOf(getFormattedTN()) > time) {
             phase = "passive";
-            sigma = 9999;
-            time = Double.valueOf(getFormattedTN());
+            sigma = ID - Double.valueOf(getFormattedTN());
+            netStat.time = Double.valueOf(getFormattedTN());
         }
         
-        else if (phaseIs("trfDecs") && Double.valueOf(getFormattedTN()) > time) {
+        else if (phaseIs("transfer_WYH") && Double.valueOf(getFormattedTN()) > time) {
+            //create decision message
+            crtDecsMsg();
+            //send decision message
+            holdIn("respond_D", 0);
+        }
+        
+        else if (phaseIs("respond_D") && Double.valueOf(getFormattedTN()) >= time) {
             phase = "passive";
-            sigma = 9999;
-            System.out.println("I am here");
-            time = Double.valueOf(getFormattedTN());
+            if (time < ID) 
+                sigma = ID - Double.valueOf(getFormattedTN());
+            else
+                sigma = INFINITY;
+            netStat.time = Double.valueOf(getFormattedTN());
+        }
+        
+        else if (phaseIs("passive") && Double.valueOf(getFormattedTN()) >= ID + calcDelay) {
+            phase = "passive";
+            sigma = INFINITY;
+        }
+        
+        //the node calculate its decision
+        else if (phaseIs("passive") && Double.valueOf(getFormattedTN()) >= ID) {
+            nodeDecision = calcNodeDecs(ID - 1, netStat.nTraitors);
+            
+//            phase = "passive";
+//            sigma = INFINITY;
+        }
+       
+        /*
+        the node got the responses from all other nodes
+        and can set his decision
+         */
+        else if (phaseIs("calc_decs") && Double.valueOf(getFormattedTN()) > ID + calcDelay) {
+            nodeDecision = inputMajority();
+            //clean the input
+            input = new Vector<Integer>();
+            //put originally received message to the input
+            input.add(netStat.msg);
+            phase = "passive";
+            sigma = INFINITY;
         }
     }
        
@@ -165,10 +214,27 @@ public class Node extends ViewableAtomic
             m.add(makeContent(OUT_COMMANDER, ndm));
             sigma = trDelay;
         }
-        if(phaseIs("trfDecs") && Double.valueOf(getFormattedTN()) <= time) {
+        else if(phaseIs("transfer_WYH") && Double.valueOf(getFormattedTN()) <= time) {
             nodeMsg ndm = new nodeMsg("DecisionTransf", transferMsgBag);
-            m.add(makeContent(OUT_DECISION, ndm));
+            m.add(makeContent(OUT_NODES, ndm));
             sigma = trDelay;
+        }
+        
+        else if(phaseIs("calc_decs") && time < ID) {
+            nodeMsg ndm = new nodeMsg("WhatYouHave", transferMsgBag);
+            netStat.time = Double.valueOf(getFormattedTN());
+            this.time = Double.valueOf(getFormattedTN());
+            m.add(makeContent(OUT_NODES, ndm));
+        }
+        
+        
+        //the node sends his decision
+        else if (phaseIs("respond_D")) {
+            nodeMsg ndm = new nodeMsg("MyDecision", transferMsgBag);
+            netStat.time = Double.valueOf(getFormattedTN());
+            this.time = Double.valueOf(getFormattedTN());
+            m.add(makeContent(OUT_DECISION, ndm));
+//          
         }
 //        else {
 //            nodeMsg ndm = new nodeMsg("WhatYouHave", askOtherMsgBag);
@@ -178,10 +244,10 @@ public class Node extends ViewableAtomic
         return m;
     }
     
-    public void crtTransferDecsMsg(Vector<Vector<Integer>> sample) {
+    public void crtDecsMsg() {
         transferMsgBag = new Vector<Vector<Integer>>();
         Vector<Integer> temp = new Vector<Integer>();
-        temp.add(sample.elementAt(0).elementAt(0));
+        temp.add(inputMajority());
         transferMsgBag.add(temp);
     }
     
@@ -277,17 +343,24 @@ public class Node extends ViewableAtomic
             return "attack";
     }
     
-    public int calcNodeDecs(int nTraitors) {
+    /**
+     * Calculating nodes decision function
+     */
+    
+    public int calcNodeDecs(int nodeId, int nTraitors) {
         if (type == 1) {
             return makeFakeMsg(netStat.msg);
         }
-        else if (nTraitors == 0)
+        if (nTraitors == 0)
             return inputMajority();
-        else {
-            createAskMsg();
-       //     holdIn("WhatYouHave", trDelay);
-            return 0;
+        
+        for (int i = 0; i < netStat.nNodes; i++) {
+            
         }
+            
+            calcNodeDecs(ID - 1, nTraitors - 1);
+            holdIn("calc_decs", calcDelay);
+        return 0;
     }
     
     public int inputMajority() {
