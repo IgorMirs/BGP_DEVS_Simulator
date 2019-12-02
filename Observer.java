@@ -1,34 +1,34 @@
-package BGP_Simulation_git;
+package BGP_Simulation_v03_Internal_decisions;
 
-import java.util.Vector;
+import java.util.*;
 
 import model.modeling.message;
 import view.modeling.ViewableAtomic;
 
 public class Observer extends ViewableAtomic
 {
-    static final public String IN_PORT = "in";
-    static final public String OUT_PORT1 = "out_msg";
-    static final public String OUT_DECISION = "out_decs";
+    static final public String OUT_PORT = "out_msg";
     
     protected int ID;   //ID of the observer
     protected int msg;  //the message that the observer send to all other nodes
     protected Vector<Integer> input;
-    protected Vector<Vector<Integer>> msgBag;  //the collection of messages where each row is a particular message for each node in the network
+    protected ArrayList<Object> msgToSend;  //the collection of messages where each row is a particular message for each node in the network
     protected int type;   //the type of node (1 - traitor; 0 - loyal)
     protected String msgName;  //the name for the message
     protected NetStat netStat;
+    
+
+    
+    protected NodeCoupledModel[] network;
     
     ///test
     protected int counter;
     
     private int seqCounter;  //the counter for the sequence number of the send message
     
-    public Observer(String name, int id, int message, NetStat netStat_) {
+    public Observer(String name, int id, int message, NetStat netStat_, NodeCoupledModel[] network_) {
         super(name);
-            addInport(IN_PORT);
-            addOutport(OUT_PORT1);
-            addOutport(OUT_DECISION);
+            addOutport(OUT_PORT);
         this.ID = id;
         this.msg = message;
         if (msg == 0)
@@ -36,6 +36,7 @@ public class Observer extends ViewableAtomic
         else
             msgName = "attack";
         netStat = netStat_;
+        network = network_;
     }
     
     public void initialize() {
@@ -48,7 +49,7 @@ public class Observer extends ViewableAtomic
         seqCounter = 1;
         setType();
         counter = 1;
-        //creating the message (message, source, dest, nextHop, checkflag, sequence_number)
+        //creating the message ([msgId, msg, {srcId}, sqnsCounter, nTraitors])
         createMsg();
        
         //put the phase to active, send the output message, call deltint() 
@@ -59,11 +60,11 @@ public class Observer extends ViewableAtomic
     
 
     public void deltint() {
-        passivate();
-        if (counter <= netStat.nNodes) {
-            msgName = "WhatYouHave?";
-            createDecMsg(counter);
-            holdIn("active", 1);
+        phase = "passive";
+        sigma = netStat.nNodes + 1;
+        if (Double.valueOf(getFormattedTN()) > netStat.nNodes) {
+            printNodesDecisions();
+            passivate();
         }
     }
     
@@ -76,43 +77,38 @@ public class Observer extends ViewableAtomic
         }
     }
     
-    public void createMsg() {
-        msgBag = new Vector<Vector<Integer>>();
+    public void printNodesDecisions() {
+        System.out.println("Original message in the network " + netStat.msg);
         for (int i = 0; i < netStat.nNodes; i++) {
-            Vector<Integer> temp = new Vector<Integer>();
-            //message
-            temp.add(msg); 
-            //source
-            temp.add(ID);
-            //destination
-            temp.add(i + 1);
-            //next hop
-            temp.add(i + 1);
-            //checked flag
-            temp.add(0);
-            //message sequence number
-            temp.add(seqCounter);
-            msgBag.add(temp);
+           System.out.println("Node ID " + network[i].fromCommander.ID + " type is " + network[i].fromCommander.type + " decision is " + network[i].fromCommander.nodeDecision);
         }
     }
     
-    public void createDecMsg(int counter_) {
-        msgBag = new Vector<Vector<Integer>>();
-            Vector<Integer> temp = new Vector<Integer>();
-            //message
-            temp.add(counter_);
-            msgBag.add(temp);
-            counter++;
+    public void createMsg() {
+        //[msgId, msg, {srcId}, sqnsCounter, nTraitors]
+        msgToSend = new ArrayList<Object>();
+        //add message ID
+        msgToSend.add(netStat.getMsgId());
+        //source ID as an array
+        Vector<Integer> srcId = new Vector<Integer>();
+        srcId.add(ID);
+        msgToSend.add(srcId);
+        //message value
+        msgToSend.add(msg); 
+        //message sequence number
+        msgToSend.add(seqCounter);
+        //add number of traitors
+        msgToSend.add(netStat.nTraitors);
     }
+    
        
     public message out() {
         message m = new message();
-        nodeMsg stm = new nodeMsg(msgName, msgBag);
-        netStat.time = Double.valueOf(getFormattedTN());
-        if (sigma == 0)
-            m.add(makeContent(OUT_PORT1, stm));
-        else
-            m.add(makeContent(OUT_DECISION, stm));
+        //send the message only once in the beginning when time is 0
+        if (Double.valueOf(getFormattedTN()) == 0) {
+            WhatYouHaveMsg alm = new WhatYouHaveMsg(msgName, msgToSend);
+            m.add(makeContent(OUT_PORT, alm));
+        }
         return m;
     }
 }
