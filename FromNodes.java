@@ -1,4 +1,4 @@
-package BGP_Simulation_v04_Internal_decisions;
+package BGP_Simulation_v05_NetworkTopology;
 
 import java.util.*;
 
@@ -10,8 +10,10 @@ public class FromNodes extends MsgReceiver
 {
     static final public String IN_DECISION = "in_decs";
     
-    protected ArrayList<Object> respondMatrix;  
+    protected ArrayList<Object> respondMatrix;
+    protected ArrayList<Object> whatDoYouHave;
     int level;
+    int messageID;
     
     public FromNodes(String name, int id, NetStat netStat_, NodeInput nodeInput_, NodeNotRespond notRespond_, int level_) {
         super(name);
@@ -55,19 +57,20 @@ public class FromNodes extends MsgReceiver
         //iteration through the messages
         for (int i = 0; i < x.getLength(); i++) {
             if (messageOnPort(x, INPORT, i) && (notRespond.notRespond != true)) {
-               ArrayList<Object> whatDoYouHave = ((WhatYouHaveMsg) x.getValOnPort(INPORT, i)).msgToSend;
+               whatDoYouHave = ((WhatYouHaveMsg) x.getValOnPort(INPORT, i)).msgToSend;
                //get the level value
                int levelValue = getLevel(whatDoYouHave);
                //from node checks the message only for it's level
                if (levelValue == level) { 
                    //get received message ID
                    int msgID = getMsgID(whatDoYouHave);
+                   messageID = msgID;
                    //if the node is traitor - he do not ask other nodes
                    if (type == 1) {
                        nodeDecision = makeFakeMsg(netStat.msg);
                        respondMsg = new ArrayList<Object>();
                        crtRespondMsg(msgID);
-//                       System.out.println("Respond of node " + ID + " is " + respondMsg);
+                       System.out.println("Respond of node " + ID + " is " + respondMsg);
                        holdIn("respond", 0);
                    } 
                    else {
@@ -101,7 +104,7 @@ public class FromNodes extends MsgReceiver
                            respondMatrix.add(tempRM);
                            
                            System.out.println("FROM NODES Respond matrix " + ID + " " + respondMatrix);
-                           holdIn("calc_decs", ID * countDelay());
+                           holdIn("calc_decs", 0);
                        
                        } 
                        //if there is no traitors in the message - respond the decision
@@ -113,7 +116,7 @@ public class FromNodes extends MsgReceiver
                              holdIn("respond", 0);
                        }
                    }
-               }
+                }
             } //end if INPORT
             
             if (messageOnPort(x, IN_DECISION, i) && phaseIs("calc_decs")/*&& type != 1 && (notRespond.notRespond != true)*/) {
@@ -134,7 +137,7 @@ public class FromNodes extends MsgReceiver
                     respondMsg.add(respond.elementAt(0));
                     respondMsg.add(ID);
                     respondMsg.add(respond.elementAt(1));
-//                    System.out.println("Respond of node " + ID + " is " + respondMsg);
+                    System.out.println("Respond of node " + ID + " is " + respondMsg);
                     holdIn("respond", 0);
                 }
             }
@@ -142,19 +145,31 @@ public class FromNodes extends MsgReceiver
     } //end deltext()
     
     public void deltint() {
-        if (phaseIs("respond"))
+        if (phaseIs("transfer")) {
+            holdIn("transfered", ID * countDelay());
+        }
+        else if (phaseIs("transfered")) {
+            holdIn("respond", 0);
+        }
+        else if (phaseIs("respond"))
             passivate();
-        else 
+        else {
             holdIn(phase, INFINITY);
+        }
     }
        
     public message out() {
         message m = new message();
         
         if (phaseIs("respond")) {
-            arrayListMsg alm = new arrayListMsg("Respond of " + ID , respondMsg);
+            arrayListMsg alm = new arrayListMsg("Respond " + ID + " on " + messageID, respondMsg);
             m.add(makeContent(OUT_DECISION, alm));
-        } else {
+        } 
+        else if (phaseIs("transfer")) {
+            WhatYouHaveMsg nm = new WhatYouHaveMsg("TRANSFER" + ID + " on " + messageID, whatDoYouHave);
+            m.add(makeContent(OUT_NODES, nm));
+        }
+        else if (phaseIs("calc_decs")) {
             WhatYouHaveMsg nm = new WhatYouHaveMsg("WhatYouHave" + ID, whatYouHaveMsg);
             m.add(makeContent(OUT_NODES, nm));
         }

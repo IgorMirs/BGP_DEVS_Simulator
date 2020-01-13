@@ -1,4 +1,4 @@
-package BGP_Simulation_v04_Internal_decisions;
+package BGP_Simulation_v05_NetworkTopology;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
@@ -352,7 +352,7 @@ public class MsgReceiver extends ViewableAtomic {
         if (finished) {
             //add the original input from the commander
             decisions.add(input.elementAt(0));
-//            System.out.println("isFinishedToCalc() Respond matrix " + ID + " " + respondMatrix);
+            System.out.println("isFinishedToCalc() Respond matrix " + ID + " " + respondMatrix);
 //            System.out.println("Decision " + majority(decisions));
             nodeDecision = majority(decisions);
             return true;
