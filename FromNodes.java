@@ -1,4 +1,4 @@
-package BGP_Simulation_v05_NetworkTopology;
+package BGP_Simulation_v05_NetworkTopology_Worst_sim2;
 
 import java.util.*;
 
@@ -70,7 +70,7 @@ public class FromNodes extends MsgReceiver
                        nodeDecision = makeFakeMsg(netStat.msg);
                        respondMsg = new ArrayList<Object>();
                        crtRespondMsg(msgID);
-                       System.out.println("Respond of node " + ID + " is " + respondMsg);
+//                       System.out.println("Respond of node " + ID + " is " + respondMsg);
                        holdIn("respond", 0);
                    } 
                    else {
@@ -94,7 +94,7 @@ public class FromNodes extends MsgReceiver
                            //create msg to ask other nodes
                            crtWhatYouHaveMsg(newMsgId, srcID, nTraitors, level + 1);
                            
-                           System.out.println("From Nodes WYH " + ID + " " + whatYouHaveMsg);
+//                           System.out.println("From Nodes WYH " + ID + " " + whatYouHaveMsg);
                            //create new respond matrix
                            respondMatrix = new ArrayList<Object>();
                            Vector<Vector<Integer>> tempRM = addRespondMatrix(newMsgId);
@@ -103,7 +103,7 @@ public class FromNodes extends MsgReceiver
                            //add to the list respond matrix
                            respondMatrix.add(tempRM);
                            
-                           System.out.println("FROM NODES Respond matrix " + ID + " " + respondMatrix);
+//                           System.out.println("FROM NODES Respond matrix " + ID + " " + respondMatrix);
                            holdIn("calc_decs", 0);
                        
                        } 
@@ -112,7 +112,7 @@ public class FromNodes extends MsgReceiver
                            //create respond message
                              respondMsg = new ArrayList<Object>();
                              crtRespondMsg(msgID);
-                             System.out.println("Respond of node " + ID + " is " + respondMsg);
+//                             System.out.println("Respond of node " + ID + " is " + respondMsg);
                              holdIn("respond", 0);
                        }
                    }
@@ -137,7 +137,7 @@ public class FromNodes extends MsgReceiver
                     respondMsg.add(respond.elementAt(0));
                     respondMsg.add(ID);
                     respondMsg.add(respond.elementAt(1));
-                    System.out.println("Respond of node " + ID + " is " + respondMsg);
+//                    System.out.println("Respond of node " + ID + " is " + respondMsg);
                     holdIn("respond", 0);
                 }
             }

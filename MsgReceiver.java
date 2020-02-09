@@ -1,4 +1,4 @@
-package BGP_Simulation_v05_NetworkTopology;
+package BGP_Simulation_v05_NetworkTopology_Worst_sim2;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
@@ -322,6 +322,17 @@ public class MsgReceiver extends ViewableAtomic {
             respondMsg.add(makeFakeMsg(netStat.msg));
         }
     }
+    
+  //check the vector with received msg and choose the worst case
+    public int checkReceivedMsg(Vector<Integer> msgVec) {
+        for (int i = 0; i < msgVec.size(); i++) {
+            //if find at least one wrong msg - we find the worst case
+            if (msgVec.elementAt(i) == makeFakeMsg(netStat.msg)) {
+                return makeFakeMsg(netStat.msg);
+            }
+        }
+        return netStat.msg;
+    }
 	
     /**
      * Checking if received response is in the waiting list of responses
@@ -352,7 +363,7 @@ public class MsgReceiver extends ViewableAtomic {
         if (finished) {
             //add the original input from the commander
             decisions.add(input.elementAt(0));
-            System.out.println("isFinishedToCalc() Respond matrix " + ID + " " + respondMatrix);
+//            System.out.println("isFinishedToCalc() Respond matrix " + ID + " " + respondMatrix);
 //            System.out.println("Decision " + majority(decisions));
             nodeDecision = majority(decisions);
             return true;

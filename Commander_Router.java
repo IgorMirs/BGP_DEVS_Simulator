@@ -1,4 +1,4 @@
-package BGP_Simulation_v05_NetworkTopology;
+package BGP_Simulation_v05_NetworkTopology_Worst_sim2;
 
 import java.util.*;
 
@@ -18,6 +18,7 @@ public class Commander_Router extends MsgReceiver
     protected ArrayList<Object> whatDoYouHave;
     int level;
     int msgID;
+    Vector<Integer> dscVal = new Vector<Integer>();
     
     public Commander_Router(String name, NetStat netStat_) {
         super(name);
@@ -54,6 +55,7 @@ public class Commander_Router extends MsgReceiver
     public void deltext(double e, message x) {
         Continue(e);
         time = netStat.time;
+        dscVal.clear();
         //iteration through the messages
         for (int i = 0; i < x.getLength(); i++) {
             if (messageOnPort(x, IN_NODES, i)) {
@@ -61,8 +63,28 @@ public class Commander_Router extends MsgReceiver
                holdIn("transfer", 0);
             }
             if (messageOnPort(x, IN_DECISION, i)) {
-                respondMsg = ((arrayListMsg) x.getValOnPort(IN_DECISION, i)).msgToSend;
-                holdIn("transfer_dcs", 0);
+                if (i == x.getLength() - 1) {
+                    respondMsg = ((arrayListMsg) x.getValOnPort(IN_DECISION, i)).msgToSend;
+                    dscVal.add(getMsgValue(respondMsg));
+                    //check for the worst received decision message
+                    int dscWorst = checkReceivedMsg(dscVal);
+                    //if found worst decision - transfer this message
+                    if (dscWorst == makeFakeMsg(netStat.msg)) {
+                        ArrayList<Object> temp = respondMsg;
+                        respondMsg = new ArrayList<Object>();
+                        for (int k = 0; k < temp.size(); k++) {
+                            if (k == 2)
+                                respondMsg.add(makeFakeMsg(netStat.msg));
+                            else
+                                respondMsg.add(temp.get(k)); 
+                        }
+                    }
+                    holdIn("transfer_dcs", 0);
+                }
+                else {
+                    respondMsg = ((arrayListMsg) x.getValOnPort(IN_DECISION, i)).msgToSend;
+                    dscVal.add(getMsgValue(respondMsg));
+                }
             }
         } 
     }

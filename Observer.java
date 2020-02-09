@@ -1,11 +1,13 @@
-package BGP_Simulation_v05_NetworkTopology;
+package BGP_Simulation_v05_NetworkTopology_Worst_sim2;
 
 import java.util.*;
-
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
 import model.modeling.message;
-import view.modeling.ViewableAtomic;
+//import view.modeling.ViewableAtomic;
 
-public class Observer extends ViewableAtomic
+public class Observer extends model.modeling.atomic
 {
     static final public String OUT_PORT = "out_msg";
     
@@ -16,8 +18,8 @@ public class Observer extends ViewableAtomic
     protected int type;   //the type of node (1 - traitor; 0 - loyal)
     protected String msgName;  //the name for the message
     protected NetStat netStat;
-    
-
+    protected int time;
+    protected String fileName;
     
     protected NodeCoupledModel[] network;
     
@@ -26,11 +28,12 @@ public class Observer extends ViewableAtomic
     
     private int seqCounter;  //the counter for the sequence number of the send message
     
-    public Observer(String name, int id, int message, NetStat netStat_, NodeCoupledModel[] network_) {
+    public Observer(String name, int id, int message, NetStat netStat_, NodeCoupledModel[] network_, String fileName_) {
         super(name);
             addOutport(OUT_PORT);
         this.ID = id;
         this.msg = message;
+        fileName = fileName_;
         if (msg == 0)
             msgName = "retreat";
         else
@@ -45,7 +48,7 @@ public class Observer extends ViewableAtomic
         sigma = INFINITY;
         //initialization of all state variables
         input = new Vector<Integer>();
-      
+        time = 0;
         seqCounter = 1;
         setType();
         counter = 1;
@@ -62,10 +65,17 @@ public class Observer extends ViewableAtomic
     public void deltint() {
         phase = "passive";
         sigma = netStat.nNodes + 1;
-        if (Double.valueOf(getFormattedTN()) > netStat.nNodes) {
-            printNodesDecisions();
+        if (time > netStat.nNodes) {
+            //print nodes decisions to console
+//            printNodesDecisions();
+            //create the file with nodes decisions
+            printToFile();
+            //create succeed or failed file
+            checkSolution();
             passivate();
         }
+        else 
+            time = netStat.nNodes + 1;
     }
     
     public void setType() {
@@ -81,6 +91,65 @@ public class Observer extends ViewableAtomic
         System.out.println("Original message in the network " + netStat.msg);
         for (int i = 0; i < netStat.nNodes; i++) {
            System.out.println("Node ID " + network[i].ID + " type is " + network[i].fromCommander.type + " decision is " + network[i].fromCommander.nodeDecision);
+        }
+    }
+    
+    public void checkSolution() {
+        String filePath = ".\\BGP_Simulation_v05_NetworkTopology_Worst_sim2\\results\\" + fileName + Arrays.toString(netStat.traitorVec);
+        for (int i = 0; i < netStat.nNodes; i++) {
+            if (network[i].fromCommander.nodeDecision != netStat.msg && network[i].fromCommander.type != 1) {
+                File file = new File(filePath + "._failed");
+                try {
+                    file.createNewFile();
+                    System.out.println('\n' + file.getName() + '\n');
+                }
+                catch (Exception e)
+                {
+                    System.out.println("Error open the file");
+                    // TODO: handle exception
+                    e.printStackTrace();
+                }
+                return;
+            }
+        }  
+        File file = new File(filePath + "._succeed");
+        try {
+            file.createNewFile();
+            System.out.println('\n' + file.getName() + '\n');
+        }
+        catch (Exception e)
+        {
+            System.out.println("Error open the file");
+            // TODO: handle exception
+            e.printStackTrace();
+        }
+    }
+    
+    public void printToFile() {
+        try {
+            String file = ".\\BGP_Simulation_v05_NetworkTopology_Worst_sim2\\results\\" + fileName + Arrays.toString(netStat.traitorVec) + ".result";
+            PrintWriter pw = new PrintWriter(new File(file)); 
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < netStat.nNodes; i++) {
+                sb.append(network[i].ID);
+                if (i != netStat.nNodes - 1)
+                    sb.append(",");
+            }
+            sb.append("\r\n");
+            for (int i = 0; i < netStat.nNodes; i++) {
+                sb.append(network[i].fromCommander.nodeDecision);
+                if (i != netStat.nNodes - 1)
+                    sb.append(",");
+            }
+            sb.append("\r\n");
+            pw.write(sb.toString());
+            pw.close();
+        }
+        catch (Exception e)
+        {
+            System.out.println("Error open the file");
+            // TODO: handle exception
+            e.printStackTrace();
         }
     }
     
@@ -108,7 +177,7 @@ public class Observer extends ViewableAtomic
     public message out() {
         message m = new message();
         //send the message only once in the beginning when time is 0
-        if (Double.valueOf(getFormattedTN()) == 0) {
+        if (time == 0) {
             WhatYouHaveMsg alm = new WhatYouHaveMsg(msgName, msgToSend);
             m.add(makeContent(OUT_PORT, alm));
         }

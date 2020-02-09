@@ -1,4 +1,4 @@
-package BGP_Simulation_v05_NetworkTopology;
+package BGP_Simulation_v05_NetworkTopology_Worst_sim2;
 
 import java.util.*;
 
@@ -10,7 +10,7 @@ public class FromCommader extends MsgReceiver
 {
     static final public String IN_DECISION = "in_decs";
     protected ArrayList<Object> fromCommander;
-
+    Vector<Integer> msgVal = new Vector<Integer>();
     
     public FromCommader(String name, int id, NetStat netStat_, NodeInput nodeInput_, NodeNotRespond notRespond_) {
         super(name);
@@ -44,20 +44,21 @@ public class FromCommader extends MsgReceiver
     public void deltext(double e, message x) {
         Continue(e);
         time = netStat.time;
+        msgVal.clear();
         //iteration through the messages
         for (int i = 0; i < x.getLength(); i++) {
             if (phaseIs("passive")) {
-                if (messageOnPort(x, INPORT, i)) {
-                   fromCommander = ((WhatYouHaveMsg) x.getValOnPort(INPORT, i)).msgToSend;
-                   //put the received msg from the commander to the input
-                   input.add(getMsgValue(fromCommander));
-                   System.out.println("ID " + ID + " input " + input);
-                   
-                   //if the node is traitor - he do not ask other nodes
-                   if (type == 1) {
-                       nodeDecision = makeFakeMsg(netStat.msg);
-                       //if the message wasn't previously changed
-                       if (getMsgValue(fromCommander) != makeFakeMsg(netStat.msg)) {
+                if (i == x.getLength() - 1) {
+                    if (messageOnPort(x, INPORT, i)) {
+                       fromCommander = ((WhatYouHaveMsg) x.getValOnPort(INPORT, i)).msgToSend;
+                       msgVal.add(getMsgValue(fromCommander));
+                       int msgWorst = checkReceivedMsg(msgVal);
+                       //System.out.println(ID + " Msg Value " + msgVal);
+                       //System.out.println(ID + " WORST CASE " + checkReceivedMsg(msgVal));
+                       //put the worst transfered msg to the input
+                       input.add(msgWorst);
+                       //if the node found the worst case - it transfers this msg further
+                       if (msgWorst == makeFakeMsg(netStat.msg)) {
                            ArrayList<Object> temp = fromCommander;
                            fromCommander = new ArrayList<Object>();
                            for (int k = 0; k < temp.size(); k++) {
@@ -68,52 +69,75 @@ public class FromCommader extends MsgReceiver
                            }
                        }
                        
+//                       System.out.println("ID " + ID + " input " + input);
                        
-                       holdIn("transfer", 0);
-                       break;
-                   }
-                
-                   //get number of traitors from the received message
-                   int nTraitors = getnTraitors(fromCommander);
-                   //check how many traitors in the message
-                   if (nTraitors > 0) {
-                       //take the source ID array from the received from the commander msg
-                       srcID = new Vector<Integer>();
-                       Vector<Integer> tempSrcID = new Vector<Integer>();
-                       tempSrcID = getSrcID(fromCommander);
-                       for (int j : tempSrcID) {
-                           srcID.add(tempSrcID.elementAt(j));
+                       //if the node is traitor - he do not ask other nodes
+                       if (type == 1) {
+                           nodeDecision = makeFakeMsg(netStat.msg);
+                           //if the message wasn't previously changed
+                           if (getMsgValue(fromCommander) != makeFakeMsg(netStat.msg)) {
+                               ArrayList<Object> temp = fromCommander;
+                               fromCommander = new ArrayList<Object>();
+                               for (int k = 0; k < temp.size(); k++) {
+                                   if (k == 2)
+                                       fromCommander.add(makeFakeMsg(netStat.msg));
+                                   else
+                                       fromCommander.add(temp.get(k)); 
+                               }
+                           }
+                           holdIn("transfer", 0);
+                           break;
                        }
-                       //add node ID to the source array
-                       srcID.add(ID);
-                       
-                       //get received message ID
-                       int msgID = getMsgID(fromCommander);
-                       
-                       //creating what you have msg
-                       whatYouHaveMsg = new ArrayList<Object>();
-                       //add new msg id
-                       int newMsgId = netStat.getMsgId();
-                       //create "what you have" msg to ask other nodes
-    //                                   new ID,   list of nodes, num of traitors, level (always send to the highest from Nodes level)    
-                       crtWhatYouHaveMsg(newMsgId, srcID, nTraitors, 0);
-                       
-                       System.out.println("WYH " + ID + " " + whatYouHaveMsg);
-                       
-                       //create the matrix to receive responds
-                       respondMatrix = new Vector<Vector<Integer>>();
-                       crtRespondMatrix(newMsgId);
-                         
-                       System.out.println("Respond matrix " + ID + " " + respondMatrix);
-                       holdIn("transfer", 0);
-                   } 
-                   //if there is no traitors in the message - just calc the decision
-                   else {
-                       holdIn("transfer", 0);
-                       nodeDecision = inputMajority();
-                   }
-                } //end if phaseIs("passive");
-            } //end if INPORT
+                    
+                       //get number of traitors from the received message
+                       int nTraitors = getnTraitors(fromCommander);
+                       //check how many traitors in the message
+                       if (nTraitors > 0) {
+                           //take the source ID array from the received from the commander msg
+                           srcID = new Vector<Integer>();
+                           Vector<Integer> tempSrcID = new Vector<Integer>();
+                           tempSrcID = getSrcID(fromCommander);
+                           for (int j : tempSrcID) {
+                               srcID.add(tempSrcID.elementAt(j));
+                           }
+                           //add node ID to the source array
+                           srcID.add(ID);
+                           
+                           //get received message ID
+                           int msgID = getMsgID(fromCommander);
+                           
+                           //creating what you have msg
+                           whatYouHaveMsg = new ArrayList<Object>();
+                           //add new msg id
+                           int newMsgId = netStat.getMsgId();
+                           //create "what you have" msg to ask other nodes
+        //                                   new ID,   list of nodes, num of traitors, level (always send to the highest from Nodes level)    
+                           crtWhatYouHaveMsg(newMsgId, srcID, nTraitors, 0);
+                           
+//                           System.out.println("WYH " + ID + " " + whatYouHaveMsg);
+                           
+                           //create the matrix to receive responds
+                           respondMatrix = new Vector<Vector<Integer>>();
+                           crtRespondMatrix(newMsgId);
+                             
+//                           System.out.println("Respond matrix " + ID + " " + respondMatrix);
+                           holdIn("transfer", 0);
+                       } 
+                       //if there is no traitors in the message - just calc the decision
+                       else {
+                           holdIn("transfer", 0);
+                           nodeDecision = inputMajority();
+                       }
+                    } //end if phaseIs("passive");
+                } //end if INPORT
+                else {
+//                    System.out.println("iterator " + i);
+                    fromCommander = ((WhatYouHaveMsg) x.getValOnPort(INPORT, i)).msgToSend;
+//                    System.out.println(ID + " MSG " + getMsgValue(fromCommander));
+                    msgVal.add(getMsgValue(fromCommander));
+//                    System.out.println(ID + " SRC " + getSrcID(fromCommander));
+                }
+            }
             
             //if the fromCommander get decision
             if (messageOnPort(x, IN_DECISION, i) && phaseIs("calc_decs")) {
@@ -126,7 +150,7 @@ public class FromCommader extends MsgReceiver
                     notRespond.notRespond = false;
                     passivate();
                 }
-                System.out.println("Respond matrix after getting decision " + ID + " " + respondMatrix);
+//                System.out.println("Respond matrix after getting decision " + ID + " " + respondMatrix);
             }
         }
     } //end deltext()
@@ -148,6 +172,8 @@ public class FromCommader extends MsgReceiver
         else
             holdIn(phase, INFINITY);
     }
+    
+    
        
     public message out() {
         message m = new message();

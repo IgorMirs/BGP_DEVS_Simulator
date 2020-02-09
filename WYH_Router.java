@@ -1,4 +1,4 @@
-package BGP_Simulation_v05_NetworkTopology;
+package BGP_Simulation_v05_NetworkTopology_Worst_sim2;
 
 import java.util.*;
 
@@ -59,6 +59,7 @@ public class WYH_Router extends MsgReceiver
         //iteration through the messages
         for (int i = 0; i < x.getLength(); i++) {
             if (phaseIs("passive")) {
+//                System.out.println("X length " + ID + " " + x.getLength());
                 if (messageOnPort(x, INPORT, i)) {
                    whatDoYouHave = ((WhatYouHaveMsg) x.getValOnPort(INPORT, i)).msgToSend;
                    msgID = getMsgID(whatDoYouHave);
@@ -105,7 +106,7 @@ public class WYH_Router extends MsgReceiver
         double res = 0.01;
         int count = 0;
         while (count != level) {
-            res /= 10;
+            res /= 1000;
             count++;
         }
         return res;

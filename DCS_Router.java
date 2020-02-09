@@ -1,4 +1,4 @@
-package BGP_Simulation_v05_NetworkTopology;
+package BGP_Simulation_v05_NetworkTopology_Worst_sim2;
 
 import java.util.*;
 
@@ -13,6 +13,7 @@ public class DCS_Router extends MsgReceiver
     protected ArrayList<Object> respondMatrix;
     protected ArrayList<Object> respondMsg;
     int level;
+    Vector<Integer> dscVal = new Vector<Integer>();
     
     public DCS_Router(String name, int id, NetStat netStat_, NodeInput nodeInput_, NodeNotRespond notRespond_) {
         super(name);
@@ -52,22 +53,45 @@ public class DCS_Router extends MsgReceiver
     public void deltext(double e, message x) {
         Continue(e);
         time = netStat.time;
+        dscVal.clear();
         //iteration through the messages
         for (int i = 0; i < x.getLength(); i++) {
             if (phaseIs("passive")) {
-                if (messageOnPort(x, INPORT, i)) {
-                   respondMsg = ((arrayListMsg) x.getValOnPort(INPORT, i)).msgToSend;
-                   System.out.println("Before changing " + ID + " " + respondMsg);
-                   if (type == 1 && (Integer) respondMsg.get(2) != makeFakeMsg(netStat.msg)) {
-                       ArrayList<Object> temp = respondMsg;
-                       respondMsg = new ArrayList<Object>();
-                       respondMsg.add(temp.get(0));
-                       respondMsg.add(temp.get(1));
-                       respondMsg.add(makeFakeMsg(netStat.msg));
-                       System.out.println("After changing " + ID + " " + respondMsg);
-                   }
-                   holdIn("transfer", 0);
-                } 
+                if (i == x.getLength() - 1) {
+                    if (messageOnPort(x, INPORT, i)) {
+                       respondMsg = ((arrayListMsg) x.getValOnPort(INPORT, i)).msgToSend;
+//                       System.out.println("Before changing " + ID + " " + respondMsg);
+                       dscVal.add(getMsgValue(respondMsg));
+                       //check for the worst received decision message
+                       int dscWorst = checkReceivedMsg(dscVal);
+//                       System.out.println(ID + " WORST " + dscWorst);
+                       //if found worst decision - transfer this message
+                       if (dscWorst == makeFakeMsg(netStat.msg)) {
+                           ArrayList<Object> temp = respondMsg;
+                           respondMsg = new ArrayList<Object>();
+                           for (int k = 0; k < temp.size(); k++) {
+                               if (k == 2)
+                                   respondMsg.add(makeFakeMsg(netStat.msg));
+                               else
+                                   respondMsg.add(temp.get(k)); 
+                           }
+                       }
+                       //the traitor changes the decision
+                       if (type == 1 && (Integer) respondMsg.get(2) != makeFakeMsg(netStat.msg)) {
+                           ArrayList<Object> temp = respondMsg;
+                           respondMsg = new ArrayList<Object>();
+                           respondMsg.add(temp.get(0));
+                           respondMsg.add(temp.get(1));
+                           respondMsg.add(makeFakeMsg(netStat.msg));
+//                           System.out.println("After changing " + ID + " " + respondMsg);
+                       }
+                       holdIn("transfer", 0);
+                    }
+                }
+                else {
+                    respondMsg = ((arrayListMsg) x.getValOnPort(INPORT, i)).msgToSend;
+                    dscVal.add(getMsgValue(respondMsg));
+                }
             }
         }
     }

@@ -1,60 +1,61 @@
-package BGP_Simulation_v05_NetworkTopology;
+package BGP_Simulation_v05_NetworkTopology_Worst_sim2;
 
 import java.awt.Dimension;
 import java.awt.Point;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.Arrays;
 import java.util.Scanner;
+import java.util.Vector;
 
 import view.modeling.ViewableComponent;
 import view.modeling.ViewableDigraph;
 
 public class BGPTest extends ViewableDigraph 
 {
-    protected int nNodes = 5; //number of regular nodes (except commander in the network)
+    protected int nNodes; //number of regular nodes (except commander in the network)
     protected int sendMsg = 1; //original message to send 
-    private int [][] connectivity_matrix =
-    {
-        {0, 1},
-        {0, 2},
-        {0, 3},
-        {0, 4},
-        {0, 5},
-        {1, 2},
-        {1, 3},
-        {1, 4},
-        {1, 5},
-        {2, 3},
-        {2, 4},
-        {2, 5},
-        {3, 4},
-        {3, 5},
-        {4, 5},
-    };
+    protected String fileName;
+
     
-    //traitors in the network
-    private int [] traitorVec = {4};
-    private int nTraitors = traitorVec.length;
-    
-    public BGPTest() 
+    public BGPTest(int nNodes_, Vector<Integer> traitorVec_, String fileName_, Vector<Vector<Integer>> conMat_) 
     {
         super("Byzantine Generals Problem");
-        System.out.println("sdfsdfsdf");
-        /* Read from file       
-        try {
-            File data2 = new File("C:/Users/garik/eclipse-workspace/DEVS/ Enviroment/Models/BGP_Simulation_v04_Internal_decisions/Settings.txt");
-            Scanner myReader = new Scanner(data2);
-            while (myReader.hasNextLine()) {
-              String data = myReader.nextLine();
-              System.out.println(data);
+        nNodes = nNodes_;
+        fileName = fileName_;
+        String[] values = fileName.split("-");
+        //get the number of traitors
+        int nTraitors = traitorVec_.size();
+        //create an array with traitors
+        int [] traitorVec = new int [nTraitors];
+        //fill the array with traitors
+        for (int i = 0; i < nTraitors; i++) {
+            traitorVec[i] = traitorVec_.elementAt(i);
+        }
+        
+        //get the number of connections from the name of the file 
+        int nConnections = Integer.parseInt(values[1]);
+        //create the connectivity matrix with a size equal nNodes * nConnections
+        int [][] connectivity_matrix = new int[((nNodes + 1) * nConnections + 1) / 2][2];
+        //fill the connectivity matrix
+        int row = 0;
+        int col = 0;
+        for (int i = 0; i < conMat_.size() - 1; i++) {
+            for (int j = i + 1; j < conMat_.elementAt(i).size(); j++) {
+                //fill the connectivity matrix
+                if (conMat_.elementAt(i).elementAt(j) == 1) {
+                    connectivity_matrix[row][col] = i;
+                    connectivity_matrix[row][++col] = j;
+                    col = 0;
+                    row++;
+                }
             }
-            myReader.close();
-          } 
-        catch (FileNotFoundException e) {
-            System.out.println("An error occurred.");
-            e.printStackTrace();
-          }
-        */
+        }
+        
+//        //print the connectivity matrix
+//        for (int[] row1 : connectivity_matrix) { 
+//            System.out.println(Arrays.toString(row1)); 
+//        } 
         
         // Creating the network
         NodeCoupledModel[] network = new NodeCoupledModel[nNodes]; 
@@ -63,8 +64,7 @@ public class BGPTest extends ViewableDigraph
         NetStat netStat = new NetStat(traitorVec, sendMsg, nNodes, nTraitors);
 
         //creating the commander (name, ID, sending message, number of nodes to send)
-//        Observer commander = new Observer("Commander", 0, sendMsg, netStat, network);
-        CommanderCoupledModel commander = new CommanderCoupledModel ("Commander", 0, sendMsg, netStat, network);
+        CommanderCoupledModel commander = new CommanderCoupledModel ("Commander", 0, sendMsg, netStat, network, fileName);
         
         //creating the nodes
         for (int i = 0; i < nNodes; i++) {
