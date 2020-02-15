@@ -1,13 +1,14 @@
-package BGP_Simulation_v05_NetworkTopology_Worst_sim2;
+package BGP_Simulator_v06_SignedMessages;
 
 import java.util.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import model.modeling.message;
+import view.modeling.ViewableAtomic;
 //import view.modeling.ViewableAtomic;
 
-public class Observer extends model.modeling.atomic
+public class Observer extends ViewableAtomic
 {
     static final public String OUT_PORT = "out_msg";
     
@@ -20,6 +21,7 @@ public class Observer extends model.modeling.atomic
     protected NetStat netStat;
     protected int time;
     protected String fileName;
+    protected int traitorsFileRow;
     
     protected NodeCoupledModel[] network;
     
@@ -28,12 +30,13 @@ public class Observer extends model.modeling.atomic
     
     private int seqCounter;  //the counter for the sequence number of the send message
     
-    public Observer(String name, int id, int message, NetStat netStat_, NodeCoupledModel[] network_, String fileName_) {
+    public Observer(String name, int id, int message, NetStat netStat_, NodeCoupledModel[] network_, String fileName_, int traitorsFileRow_) {
         super(name);
             addOutport(OUT_PORT);
         this.ID = id;
         this.msg = message;
         fileName = fileName_;
+        traitorsFileRow = traitorsFileRow_;
         if (msg == 0)
             msgName = "retreat";
         else
@@ -65,7 +68,7 @@ public class Observer extends model.modeling.atomic
     public void deltint() {
         phase = "passive";
         sigma = netStat.nNodes + 1;
-        if (time > netStat.nNodes) {
+        if (Double.valueOf(getFormattedTN()) > netStat.nNodes) {
             //print nodes decisions to console
 //            printNodesDecisions();
             //create the file with nodes decisions
@@ -95,9 +98,11 @@ public class Observer extends model.modeling.atomic
     }
     
     public void checkSolution() {
-        String filePath = ".\\BGP_Simulation_v05_NetworkTopology_Worst_sim2\\results\\" + fileName + Arrays.toString(netStat.traitorVec);
+        String filePath = ".\\BGP_Simulator_v06_SignedMessages\\results\\" + fileName + "[" + traitorsFileRow + "]";
+//        String filePath = "C:\\Users\\garik\\eclipse-workspace\\DEVS Enviroment\\Models\\BGP_Simulator_v06_SignedMessages\\results\\" + Arrays.toString(netStat.traitorVec);
         for (int i = 0; i < netStat.nNodes; i++) {
-            if (network[i].fromCommander.nodeDecision != netStat.msg && network[i].fromCommander.type != 1) {
+            if (network[i].fromCommander.nodeDecision != netStat.msg && network[i].fromCommander.type != 1 || 
+                netStat.nTraitors == netStat.nNodes) {
                 File file = new File(filePath + "._failed");
                 try {
                     file.createNewFile();
@@ -127,7 +132,7 @@ public class Observer extends model.modeling.atomic
     
     public void printToFile() {
         try {
-            String file = ".\\BGP_Simulation_v05_NetworkTopology_Worst_sim2\\results\\" + fileName + Arrays.toString(netStat.traitorVec) + ".result";
+            String file = ".\\BGP_Simulator_v06_SignedMessages\\results\\" + fileName + "[" + traitorsFileRow + "]" + ".result";
             PrintWriter pw = new PrintWriter(new File(file)); 
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < netStat.nNodes; i++) {

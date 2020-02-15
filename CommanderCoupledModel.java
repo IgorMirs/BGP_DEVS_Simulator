@@ -1,4 +1,4 @@
-package BGP_Simulation_v05_NetworkTopology_Worst_sim2;
+package BGP_Simulator_v06_SignedMessages;
 
 import java.awt.Dimension;
 import java.awt.Point;
@@ -17,10 +17,10 @@ public class CommanderCoupledModel extends ViewableDigraph {
     public Observer observer;
     public Commander_Router cr;
     
-    public CommanderCoupledModel(String name, int id, int msg_, NetStat netStat_, NodeCoupledModel[] network_, String fileName_) {
+    public CommanderCoupledModel(String name, int id, int msg_, NetStat netStat_, NodeCoupledModel[] network_, String fileName_, int traitorsFileRow_) {
         super(name);
         //create the observer model
-        observer = new Observer("Observer", id, msg_, netStat_, network_, fileName_);
+        observer = new Observer("Observer", id, msg_, netStat_, network_, fileName_, traitorsFileRow_);
         //create the router model
         cr = new Commander_Router("Router", netStat_);
 

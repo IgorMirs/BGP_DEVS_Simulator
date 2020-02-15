@@ -1,4 +1,4 @@
-package BGP_Simulation_v05_NetworkTopology_Worst_sim2;
+package BGP_Simulator_v06_SignedMessages;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -20,22 +20,49 @@ public class sim {
 	    Vector<Integer> traitorVec = new Vector<Integer>();
 	    String fullFilePath;
 	    String fileName;
-	    
-	    if (args.length < 3) {
+	    int traitorsFileRow;
+	    if (args.length < 2) {
 	        System.out.println("Less 3");
 	        return;
 	    }
 	    else {
 	        nNodes = Integer.parseInt(args[0]);
-	        traitorVec.add(Integer.parseInt(args[1])); 
+	        traitorsFileRow = Integer.parseInt(args[1]);
 	        fullFilePath = args[2];
 	    }
 	    
-        
         //split the string with a full path on an array of separated strings divided by '\\'
-	    String[] names = fullFilePath.split("\\\\");
-	    //take the last member of this array as a file name
-	    fileName = names[names.length - 1];
+        String[] names = fullFilePath.split("\\\\");
+        //take the last member of this array as a file name
+        fileName = names[names.length - 1];
+	    
+	    BufferedReader rdr;
+	    int fileCounter = 0;
+	    try {
+	        //read the file with traitors
+	        rdr = new BufferedReader(new FileReader(".\\BGP_Simulator_v06_SignedMessages\\traitors\\" + fileName + ".txt"));
+	        String line = rdr.readLine();
+	        //search for the specific line in the file
+	        while (fileCounter != traitorsFileRow) {
+	            line = rdr.readLine();
+	            fileCounter++;
+	        }
+	        //split line number from traitors number
+	        String [] trRow = line.split(" ");
+	        //split traitors
+	        String[] trIds = trRow[1].split(",");
+	        for (int i = 0; i < trIds.length; i++) 
+	            traitorVec.add(Integer.parseInt(trIds[i]));
+//	            System.out.println("" + trIds[i]);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+//        //split the string with a full path on an array of separated strings divided by '\\'
+//	    String[] names = fullFilePath.split("\\\\");
+//	    //take the last member of this array as a file name
+//	    fileName = names[names.length - 1];
 	    BufferedReader reader;
 	    //connectivity matrix
 	    Vector<Vector<Integer>> conMat = new Vector<Vector<Integer>>();
@@ -61,7 +88,7 @@ public class sim {
             System.out.println("An error occurred.");
             e.printStackTrace();
           }
-		mySimModel=new BGPTest(nNodes - 1, traitorVec, fileName, conMat);
+		mySimModel=new BGPTest(nNodes - 1, traitorVec, fileName, conMat, traitorsFileRow);
 		coordinator simC=new coordinator(mySimModel);		
 		simC.initialize();
 		simC.simulate(1000000);

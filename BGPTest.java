@@ -1,4 +1,4 @@
-package BGP_Simulation_v05_NetworkTopology_Worst_sim2;
+package BGP_Simulator_v06_SignedMessages;
 
 import java.awt.Dimension;
 import java.awt.Point;
@@ -16,13 +16,40 @@ public class BGPTest extends ViewableDigraph
     protected int nNodes; //number of regular nodes (except commander in the network)
     protected int sendMsg = 1; //original message to send 
     protected String fileName;
-
+    protected int traitorsFileRow;
+//    private int [][] connectivity_matrix =
+//    {
+//        {0, 1},
+//        {0, 3},
+//        {0, 4},
+//        {0, 5},
+//        {0, 7},
+//        {1, 2},
+//        {1, 4},
+//        {1, 5},
+//        {1, 6},
+//        {2, 3},
+//        {2, 5},
+//        {2, 6},
+//        {2, 7},
+//        {3, 4},
+//        {3, 6},
+//        {3, 7},
+//        {4, 5},
+//        {4, 7},
+//        {5, 6},
+//        {6, 7},
+//    };
+  //traitors in the network
+//    private int [] traitorVec = {1, 3, 4, 5, 6};
+//    private int nTraitors = traitorVec.length;
     
-    public BGPTest(int nNodes_, Vector<Integer> traitorVec_, String fileName_, Vector<Vector<Integer>> conMat_) 
+    public BGPTest(int nNodes_, Vector<Integer> traitorVec_, String fileName_, Vector<Vector<Integer>> conMat_, int traitorsFileRow_) 
     {
         super("Byzantine Generals Problem");
         nNodes = nNodes_;
         fileName = fileName_;
+        traitorsFileRow = traitorsFileRow_;
         String[] values = fileName.split("-");
         //get the number of traitors
         int nTraitors = traitorVec_.size();
@@ -64,7 +91,7 @@ public class BGPTest extends ViewableDigraph
         NetStat netStat = new NetStat(traitorVec, sendMsg, nNodes, nTraitors);
 
         //creating the commander (name, ID, sending message, number of nodes to send)
-        CommanderCoupledModel commander = new CommanderCoupledModel ("Commander", 0, sendMsg, netStat, network, fileName);
+        CommanderCoupledModel commander = new CommanderCoupledModel ("Commander", 0, sendMsg, netStat, network, fileName, traitorsFileRow);
         
         //creating the nodes
         for (int i = 0; i < nNodes; i++) {
